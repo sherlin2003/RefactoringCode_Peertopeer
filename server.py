@@ -35,90 +35,67 @@ class server:
 
 
 
-
-    def peer_threads(self,client,addr):
-
-        peer_id=uuid.uuid4().int>>115
-        #generates unique id for each peer
-
-        self.peers[peer_id]=addr
-        #appending peer spacifications to list of peers
-
-        client.send(pickle.dumps((peer_id,addr[1])))
-        #sending peerid to the recipient and also the portno for connection
-
-
-        while True: 
-            method=pickle.loads(client.recv(max_chunk))     
-
-            print("Method opted by peer_id-",peer_id," is ",method)
-
-            if(method=="search"):
-                #searching a file in the centralized directory
+    def peer_threads(self, client, addr):
+        peer_id = uuid.uuid4().int >> 115
+        self.peers[peer_id] = addr
+        client.send(pickle.dumps((peer_id, addr[1])))
+    
+        while True:
+            method = pickle.loads(client.recv(max_chunk))
+    
+            print("Method opted by peer_id-", peer_id, " is ", method)
+    
+            if method == "search":
                 client.send(pickle.dumps("ok"))
-                file_name=pickle.loads(client.recv(max_chunk))
-                #loading up the name of the file needed for searching
-
-                if(file_name in self.file):
+                file_name = pickle.loads(client.recv(max_chunk))
+    
+                if file_name in self.file:
                     client.send(pickle.dumps('found'))
-                    reply=pickle.loads(client.recv(max_chunk))
-                    #getting reply from the peer whether to send or not
-
-                    if(reply=='send'):#peer asks to send
-                        content=pickle.dumps(self.file[file_name])
+                    reply = pickle.loads(client.recv(max_chunk))
+    
+                    if reply == 'send':
+                        content = pickle.dumps(self.file[file_name])
                         client.send(content)
-
-                       #In case of files contained by many peers
-                        #selection of file from which peer is needed
-                        peerno=pickle.loads(client.recv(max_chunk))
+    
+                        peerno = pickle.loads(client.recv(max_chunk))
                         client.send(pickle.dumps(self.peers[peerno]))
                     else:
-                        "only search is done.."
+                        print("only search is done..")
                 else:
-                    #file not found(invalid one)
                     client.send(pickle.dumps("not found"))
-        
-
-            elif(method=='register'):
-                #registering files to the server by peers
-                #in order to access
+    
+            elif method == 'register':
                 client.send(pickle.dumps('ok'))
-                file_name=pickle.loads(client.recv(max_chunk))
-                print("For registering file by peer_id-",peer_id)
-
+                file_name = pickle.loads(client.recv(max_chunk))
+                print("For registering file by peer_id-", peer_id)
+    
                 if file_name in self.file:
                     self.file[file_name].append(peer_id)
-                #in case of file contained only the peerids are noted for 
-                #the file
                 else:
-                    self.file[file_name]=[]
-                    self.file[file_name].append(peer_id)
-                #new file list created and peerids are appended
+                    self.file[file_name] = [peer_id]
+    
                 client.send(pickle.dumps('success'))
-
-            elif(method=='bye'):
+    
+            elif method == 'bye':
                 client.send(pickle.dumps('ok'))
-
-                list1=[]
-
-            #peerids present in the files are deleted in file list
-            #if file[file_name] is empty
-            #then file_name should be deleted in register
-
+    
+                list1 = []
+    
                 for i in self.file:
                     try:
                         self.file[i].remove(peer_id)
-                        if(self.file[i]==[]):
+                        if not self.file[i]:
                             list1.append(i)
                     except ValueError:
                         continue
-                    
-
-                #peerids are deleted in peers list
+    
+                for i in list1:
+                    del self.file[i]
+    
                 del self.peers[peer_id]
                 sys.exit(0)
 
-
+    
 
     def connections(self):
         self.sock.listen(self.no_of_connections)
