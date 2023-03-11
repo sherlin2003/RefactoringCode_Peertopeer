@@ -121,55 +121,45 @@ class peer:
             que.put('okay')
 
     def search(self, file_name):
-    # search for the file in the centralized directory
         self.s.send(pickle.dumps('search'))
     
-        # receive reply from directory
-        if pickle.loads(self.s.recv(max_chunk)) == 'ok':
-            # send file name to search for
-            self.s.send(pickle.dumps(file_name))
+        reply = pickle.loads(self.s.recv(max_chunk))
+        if reply != 'ok':
+            return False
     
-            # receive result of search
-            data = pickle.loads(self.s.recv(max_chunk))
+        self.s.send(pickle.dumps(file_name))
     
-            if data == 'found':
-                # ask user if they want to download the file
-                proceed = input("\nFile Found\nProceed further to download(y/n\n")
+        data = pickle.loads(self.s.recv(max_chunk))
+        if data == 'not found':
+            print("File not found with any peer")
+            return False
+        if data != 'found':
+            return False
     
-                if proceed == 'y':
-                    # send request to download file
-                    self.s.send(pickle.dumps('send'))
+        proceed = input("\nFile Found\nProceed further to download(y/n)\n")
+        if proceed != 'y':
+            self.s.send(pickle.dumps('n'))
+            return 'sch'
     
-                    # receive list of peers that have the file
-                    data = pickle.loads(self.s.recv(max_chunk))
+        self.s.send(pickle.dumps('send'))
     
-                    if len(data) == 1:
-                        # only one peer has the file, send its address to download from
-                        self.s.send(pickle.dumps(data[0]))
-                    else:
-                        # multiple peers have the file, ask user which peer to download from
-                        print("select the peer from which the file can be extracted\n")
-                        for i in range(len(data)):
-                            print(i+1, "->", data[i])
-                        choice = int(input("Enter the choice of the peer:\n"))
-                        self.s.send(pickle.dumps(data[choice-1]))
+        data = pickle.loads(self.s.recv(max_chunk))
+        if not data:
+            return False
     
-                    # receive address of peer to download from
-                    addr = pickle.loads(self.s.recv(max_chunk))
-                    return self.download(addr, file_name)
+        if len(data) == 1:
+            peer = data[0]
+        else:
+            print("Select the peer from which the file can be extracted")
+            for i, peer in enumerate(data):
+                print(i+1, "->", peer)
+            choice = int(input("Enter the choice of the peer: "))
+            peer = data[choice-1]
     
-                elif proceed == 'n':
-                    # user doesn't want to download file
-                    self.s.send(pickle.dumps('n'))
-                    return 'sch'  # only search successful
+        self.s.send(pickle.dumps(peer))
     
-            elif data == 'not found':
-                print("File not found with any peer\n")
-    
-        # file not found or there was an error
-        return False
-
-
+        addr = pickle.loads(self.s.recv(max_chunk))
+        return self.download(addr, file_name)
 
     def seed(self):
         try:
