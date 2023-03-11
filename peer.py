@@ -8,6 +8,11 @@ import queue
 
 max_chunk=1024
 
+
+class excepclass(Exception):
+    print("Thread didnt Start")
+
+
 class peer:
     def __init__(self,host,port,no_of_connections):
         self.s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
@@ -171,10 +176,12 @@ class peer:
                     var=que.get()
                     self.s1.close()
                     return var
-                except:
-                    print("Thread did not start")
+                except excepclass as e:
+                    print("Error Occurred" + str(e))
                     #tracing back to normal state without halting
                     traceback.print_exc()
+                    
+                
         except(KeyboardInterrupt):
             print("seeding stopped")
         return True

@@ -10,6 +10,9 @@ import sys
 port=9300
 max_chunk=1024
 
+class excepclass(Exception):
+    print("Thread didnt Start")
+
 class server:
     def __init__(self,port,no_of_connections):
         self.port=port
@@ -118,7 +121,6 @@ class server:
 
 
     def connections(self):
-        thread_id=[]
         self.sock.listen(self.no_of_connections)
         
         while True:
@@ -134,9 +136,8 @@ class server:
                 #starting the thread
                 print("thread started")
 
-
-            except:
-                print("Thread didn't start")
+            except excepclass as e:
+                print("Error Occurred" + str(e))
 
         self.sock.close()
 
@@ -144,3 +145,4 @@ class server:
 if __name__=='__main__':
     s=server(port,5)
     s.connections()
+    
